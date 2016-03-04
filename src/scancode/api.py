@@ -115,6 +115,10 @@ def get_licenses(location, minimum_score=100):
     """
     from licensedcode.models import get_license
     from licensedcode.detect import get_license_matches
+    from scancode.config import load_conf
+
+    config = load_conf()
+    policies = config.get('license_policies', {})
 
     for match in get_license_matches(location, minimum_score=minimum_score):
         for license_key in match.rule.licenses:
@@ -132,6 +136,7 @@ def get_licenses(location, minimum_score=100):
             result['spdx_url'] = lic.spdx_url
             result['start_line'] = match.query_position.start_line
             result['end_line'] = match.query_position.end_line
+            result['policy'] = policies.get(license_key, '')
             yield result
 
 

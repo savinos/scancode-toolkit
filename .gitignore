@@ -53,3 +53,5 @@ docs/_build
 !/tests/typecode/data/contenttype/compiled/win/*
 !/tests/typecode/data/contenttype/package/*
 
+# scancode conf
+.scancode.yml
