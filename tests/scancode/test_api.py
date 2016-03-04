@@ -22,30 +22,37 @@
 #  ScanCode is a free software code scanning tool from nexB Inc. and others.
 #  Visit https://github.com/nexB/scancode-toolkit/ for support and download.
 
-from __future__ import print_function, absolute_import
+from __future__ import absolute_import, print_function
 
-from os.path import abspath
-from os.path import dirname
-from os.path import exists
-from os.path import join
+from collections import OrderedDict
+import os
 
-from licensedcode import saneyaml
-
-
-CONF_FILENAME = '.scancode.yml'
-
-root_location = abspath(dirname(dirname(dirname(__file__))))
-default_location = join(root_location, CONF_FILENAME)
+from commoncode.testcase import FileBasedTesting
+from scancode.api import get_licenses
 
 
-def load_conf(location=default_location):
-    """
-    Return a configuration loaded from the .scancode.yml config file.
-    """
-    if location is None:
-        location = default_location
-    if not location or not exists(location):
-        return {}
-    with open(location, 'r') as conf:
-        conf_content = conf.read()
-    return saneyaml.load(conf_content)
+class TestApi(FileBasedTesting):
+    test_data_dir = os.path.join(os.path.dirname(__file__), 'data')
+
+    def test_get_license_with_policy_configuration(self):
+        config = self.get_test_loc('api/scancode.yml')
+        test_file = self.get_test_loc('api/LICENSE.txt')
+        result = get_licenses(location=test_file, config_location=config)
+        expected = [OrderedDict([
+            ('key', u'bsd-new'),
+            ('score', 100.0),
+            ('short_name', u'BSD-Modified'),
+            ('category', u'Attribution'),
+            ('owner', u'Regents of the University of California'),
+            ('homepage_url',
+                u'http://www.opensource.org/licenses/BSD-3-Clause'),
+            ('text_url',
+             u'http://www.opensource.org/licenses/BSD-3-Clause'),
+            ('dejacode_url',
+             'https://enterprise.dejacode.com/license_library/Demo/bsd-new/'),
+            ('spdx_license_key', u'BSD-3-Clause'),
+            ('spdx_url', u'http://spdx.org/licenses/BSD-3-Clause'),
+            ('start_line', 4), ('end_line', 12),
+            ('policy', u'Restricted License')
+        ])]
+        assert expected == list(result)

@@ -103,7 +103,7 @@ def get_urls(location):
 DEJACODE_LICENSE_URL = 'https://enterprise.dejacode.com/license_library/Demo/{}/'
 
 
-def get_licenses(location, minimum_score=100):
+def get_licenses(location, minimum_score=100, config_location=None):
     """
     Yield an iterable of dictionaries of license data detected in the file at
     location for each detected license.
@@ -112,12 +112,15 @@ def get_licenses(location, minimum_score=100):
     100 means only exact licenses will be detected. With any value below 100,
     approximate license results are included. Note that the minimum length for
     an approximate match is four words.
+
+    If a config_location is provided it will be used. Otherwise, the default
+    configuration will be loaded if available.
     """
     from licensedcode.models import get_license
     from licensedcode.detect import get_license_matches
     from scancode.config import load_conf
 
-    config = load_conf()
+    config = load_conf(config_location)
     policies = config.get('license_policies', {})
 
     for match in get_license_matches(location, minimum_score=minimum_score):
