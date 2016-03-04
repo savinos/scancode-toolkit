@@ -103,7 +103,7 @@ def get_urls(location):
 DEJACODE_LICENSE_URL = 'https://enterprise.dejacode.com/license_library/Demo/{}/'
 
 
-def get_licenses(location, min_score=0):
+def get_licenses(location, min_score=0, config_location=None):
     """
     Yield an iterable of dictionaries of license data detected in the file at
     location for each detected license.
