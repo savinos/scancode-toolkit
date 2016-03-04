@@ -115,6 +115,10 @@ def get_licenses(location, min_score=0):
     """
     from licensedcode.index import get_index
     from licensedcode.models import get_licenses as licenses_getter
+    from scancode.config import load_conf
+
+    config = load_conf()
+    policies = config.get('license_policies', {})
 
     idx = get_index()
     licenses = licenses_getter()
@@ -136,6 +140,7 @@ def get_licenses(location, min_score=0):
             result['spdx_url'] = lic.spdx_url
             result['start_line'] = lines_start
             result['end_line'] = lines_end
+            result['policy'] = policies.get(license_key, '')
             yield result
 
 
