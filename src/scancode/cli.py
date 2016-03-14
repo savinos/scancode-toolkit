@@ -27,6 +27,7 @@ from __future__ import print_function, absolute_import
 from collections import OrderedDict
 from functools import partial
 import json
+from multiprocessing import Pool
 import os
 from types import GeneratorType
 
@@ -222,6 +223,8 @@ formats = ['json', 'html', 'html-app']
 @click.option('--url', is_flag=True, default=False, help='Scan <input> for urls.')
 @click.option('-i', '--info', is_flag=True, default=False, help='Scan <input> for files information.')
 @click.option('--license-score', is_flag=False, default=0, type=int, show_default=True, help='Matches with scores lower than this score are not returned. A number between 0 and 100.')
+@click.option('-n', '--processes', is_flag=False, default=1, help='Scan <input> in n number of processes')
+
 
 @click.option('-f', '--format', is_flag=False, default='json', show_default=True, metavar='<style>',
               help='Set <output_file> format <style> to one of the standard formats: %s or the path to a custom template' % ' or '.join(formats),)
@@ -234,7 +237,7 @@ formats = ['json', 'html', 'html-app']
 @click.option('--version', is_flag=True, is_eager=True, callback=print_version, help='Show the version and exit.')
 
 def scancode(ctx, input, output_file, copyright, license, package,
-             email, url, info, license_score, format, verbose, quiet, *args, **kwargs):
+             email, url, info, license_score, format, verbose, quiet, processes=1, *args, **kwargs):
     """scan the <input> file or directory for origin clues and license and save results to the <output_file>.
 
     The scan results are printed on terminal if <output_file> is not provided.
@@ -246,12 +249,12 @@ def scancode(ctx, input, output_file, copyright, license, package,
         license = True
         package = True
 
-    results = scan(input, copyright, license, package, email, url, info, license_score, verbose, quiet)
+    results = scan(input, copyright, license, package, email, url, info, license_score, verbose, quiet, processes)
     save_results(results, format, input, output_file)
 
 
 def scan(input_path, copyright=True, license=True, package=True,
-         email=False, url=False, info=True, license_score=0, verbose=False, quiet=False):
+         email=False, url=False, info=True, license_score=0, verbose=False, quiet=False, processes=1):
     """
     Do the scans proper, return results.
     """
@@ -308,6 +311,11 @@ def scan(input_path, copyright=True, license=True, package=True,
                                show_pos=True,
                                quiet=quiet
                                ) as progressive_resources:
+        pool = Pool(processes=processes)
+        tmp = []
+        scan_results = {} 
+        proc_results = {}
+        count = 0
 
         for resource in progressive_resources:
             res = fileutils.as_posixpath(resource)
@@ -316,9 +324,17 @@ def scan(input_path, copyright=True, license=True, package=True,
             relative_path = utils.get_relative_path(original_input, abs_input, res)
             scan_result = OrderedDict(location=relative_path)
             # Should we yield instead?
-            scan_result.update(scan_one(res, scanners))
-            results.append(scan_result)
-
+            # storing the scan_result in a dictionary to call the update() later after calling the get() function from all the processes
+            scan_results[count] = scan_result
+            # storing the results from multiple processes to call the get() later
+            proc_results[count] = pool.apply_async(scan_one, args=(res, scanners,)) 
+            count = count + 1
+        pool.close()
+        pool.join()
+        for i in range(count):
+            assert proc_results[i].ready()
+            scan_results[i].update(proc_results[i].get())
+            results.append(scan_results[i])
     # TODO: eventually merge scans for the same resource location...
     # TODO: fix absolute paths as relative to original input argument...
 
