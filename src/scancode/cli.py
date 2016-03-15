@@ -26,6 +26,7 @@ from __future__ import print_function, absolute_import
 
 from collections import OrderedDict
 from functools import partial
+from itertools import imap
 import json
 from multiprocessing import Pool
 import os
@@ -254,7 +255,8 @@ def scancode(ctx, input, output_file, copyright, license, package,
 
 
 def scan(input_path, copyright=True, license=True, package=True,
-         email=False, url=False, info=True, license_score=0, verbose=False, quiet=False, processes=1):
+         email=False, url=False, info=True, license_score=0,
+        verbose=False, quiet=False, processes=1):
     """
     Do the scans proper, return results.
     """
@@ -312,28 +314,16 @@ def scan(input_path, copyright=True, license=True, package=True,
                                quiet=quiet
                                ) as progressive_resources:
         pool = Pool(processes=processes)
-        scan_results = [] 
-        proc_results = []
-        count = 0
-
-        for resource in progressive_resources:
-            res = fileutils.as_posixpath(resource)
-
-            # fix paths: keep the location as relative to the original input
-            relative_path = utils.get_relative_path(original_input, abs_input, res)
-            scan_result = OrderedDict(location=relative_path)
-            # Should we yield instead?
-            # storing the scan_result in a list to call the update() later after calling the get() function from all the processes
-            scan_results.append(scan_result)
-            # storing the results from multiple processes to call the get() later
-            proc_results.append(pool.apply_async(scan_one, args=(res, scanners,))) 
+        to_scan = imap(fileutils.as_posixpath, progressive_resources)
+        scanner = partial(scan_one, scans=scanners)
+        results = pool.map(scanner, iterable=to_scan)
         pool.close()
         pool.join()
-        for i in range(len(scan_results)):
-            scan_results[i].update(proc_results[i].get())
-            results.append(scan_results[i])
+        for scan in results:
+            # fix paths: keep the location as relative to the original input
+            scan['location'] = utils.get_relative_path(original_input, abs_input, scan['location'])
+
     # TODO: eventually merge scans for the same resource location...
-    # TODO: fix absolute paths as relative to original input argument...
 
     return results
 
