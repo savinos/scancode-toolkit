@@ -23,3 +23,5 @@
 #  Visit https://github.com/nexB/scancode-toolkit/ for support and download.
 
 __version__ = '2.0.0.dev0'
+
+from scancode.dbconf import configure
