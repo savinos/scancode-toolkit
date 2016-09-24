@@ -414,3 +414,4 @@ More info:
 * Porting ScanCode to other  OS (FreeBSD, etc.) is possible. Enter an issue for help.
 * Bugs and pull requests are welcomed.
 * See the wiki and CONTRIBUTING.rst for more info.
+
